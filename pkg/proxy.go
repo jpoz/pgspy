@@ -12,8 +12,8 @@ func NewProxy(postgresAddr, proxyAddr string) *Proxy {
 	return &Proxy{
 		PostgresAddr: postgresAddr,
 		ProxyAddr:    proxyAddr,
-		Before:       func(_ []byte) {},
-		After:        func(_ []byte) {},
+		Before:       func([]byte) {},
+		After:        func([]byte) {},
 		connid:       0,
 	}
 }
@@ -42,8 +42,6 @@ func (p *Proxy) Start() {
 	if err != nil {
 		log.Fatalf("ListenTCP of %s error:%v", proxyAddr, err)
 	}
-
-	log.Info(postgresAddr, proxyAddr)
 
 	for {
 		conn, err := listener.AcceptTCP()

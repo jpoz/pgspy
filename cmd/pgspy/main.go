@@ -10,5 +10,6 @@ import (
 func main() {
 	flag.Parse()
 	fmt.Println("Running")
+
 	pgspy.Start()
 }

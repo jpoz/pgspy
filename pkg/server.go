@@ -2,8 +2,6 @@ package pgspy
 
 import (
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func filterCallback(get []byte) bool {
@@ -23,11 +21,20 @@ func Start() {
 
 	proxy := NewProxy(pgHost, proxyHost)
 	proxy.Before = func(b []byte) {
-		// log.Infof("Before: %s\n", b)
+		// log.Infof("Before: %v -> %s ->", b[0:4], b)
+
+		msg := ParseIncoming(b)
+		if msg != nil {
+			msg.Print()
+		}
 	}
 
 	proxy.After = func(b []byte) {
-		log.Infof("After: %v\n", b)
+		// log.Infof("After: %v -> %s ->", b[0:4], b)
+		msg := ParseOutgoing(b)
+		if msg != nil {
+			msg.Print()
+		}
 	}
 	proxy.Start()
 }
