@@ -1,6 +1,6 @@
 # pgspy
 
-A simple proxy for Postgres that parses the wireformat and prints it out
+A simple Postgres proxy that parses and prints the wire protocol
 
 ### Demo
 
