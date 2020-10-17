@@ -26,6 +26,7 @@ var IncomingTypes = map[rune]string{
 
 // OutoingType is a map from the charTag to the message type
 var OutoingType = map[rune]string{
+	'7': "Unknown",
 	'R': "Authentication",
 	'K': "BackendKeyData",
 	'2': "BindComplete",
@@ -86,7 +87,13 @@ func parseIncomingPacket(buff []byte) PostgresMessage {
 	for len(buff) > 0 {
 		charTag := rune(buff[0])
 		length := binary.BigEndian.Uint32(buff[1:5])
-		payload := buff[5:length]
+		if len(buff) < int(length) {
+			log.Errorf("Parse error, length too long\n%v", buff)
+
+			return nil
+		}
+
+		payload := buff[5 : length+1]
 		desc := IncomingTypes[charTag]
 
 		log.Infof("<- %s (%d) %s", desc, length, payload)
@@ -105,9 +112,17 @@ func parseOutgoingPacket(buff []byte) PostgresMessage {
 		charTag := rune(buff[0])
 		desc := OutoingType[charTag]
 
+		if desc == "" {
+			log.Errorf("Failed to find outgoing type %d\n%v", buff[0], buff)
+			return nil
+		}
+
 		if len(buff) > 5 {
+			// log.Infof("PROCESSING %v", buff)
 			length := binary.BigEndian.Uint32(buff[1:5])
-			payload := buff[5:length]
+			// log.Infof("LENGTH %d", length)
+
+			payload := buff[5 : length+1]
 
 			log.Infof("-> %s (%d) %s", desc, length, payload)
 			buff = buff[length+1:]
