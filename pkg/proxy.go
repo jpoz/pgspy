@@ -12,14 +12,14 @@ func NewProxy(postgresAddr, proxyAddr string) *Proxy {
 	return &Proxy{
 		PostgresAddr: postgresAddr,
 		ProxyAddr:    proxyAddr,
-		Before:       func([]byte) {},
-		After:        func([]byte) {},
+		Before:       func([]byte, uint64) {},
+		After:        func([]byte, uint64) {},
 		connid:       0,
 	}
 }
 
 // Callback - function run before or after postgres
-type Callback func(get []byte)
+type Callback func(get []byte, msgID uint64)
 
 // Proxy - will proxy data to postgres
 type Proxy struct {
@@ -51,6 +51,13 @@ func (p *Proxy) Start() {
 		}
 		p.connid++
 
+		incoming := make(chan WireMessage)
+		outgoing := make(chan PostgresMessage)
+		parser := &Parser{
+			Incoming: incoming,
+			Outgoing: outgoing,
+		}
+
 		proxyConn := &ProxyConn{
 			lconn:  conn,
 			laddr:  proxyAddr,
@@ -59,6 +66,7 @@ func (p *Proxy) Start() {
 			errsig: make(chan bool),
 			prefix: fmt.Sprintf("Connection #%03d ", p.connid),
 			connID: p.connid,
+			parser: parser,
 		}
 		log.Printf("New connection #%03d", proxyConn.connID)
 		go proxyConn.Pipe(p.Before, p.After)

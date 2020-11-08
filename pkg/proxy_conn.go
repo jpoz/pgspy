@@ -1,21 +1,24 @@
 package pgspy
 
 import (
+	"fmt"
 	"net"
+	"os"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // ProxyConn - Proxy connection, piping data between proxy and remote.
 type ProxyConn struct {
-	sentBytes     uint64
-	receivedBytes uint64
-	laddr, raddr  *net.TCPAddr
-	lconn, rconn  *net.TCPConn
-	erred         bool
-	errsig        chan bool
-	prefix        string
-	connID        uint64
+	laddr, raddr *net.TCPAddr
+	lconn, rconn *net.TCPConn
+	erred        bool
+	errsig       chan bool
+	prefix       string
+	connID       uint64
+	msgID        uint64
+	parser       *Parser
 }
 
 // Pipe will move the bites from the proxy to postgres and back
@@ -50,9 +53,19 @@ func (pc *ProxyConn) handleIncomingConnection(src, dst *net.TCPConn, callback Ca
 			log.Errorf("Read failed '%s'\n", err)
 			return
 		}
-		b := getModifiedBuffer(buff[:n], callback)
 
-		n, err = dst.Write(b)
+		msgID := atomic.AddUint64(&pc.msgID, 1)
+		var cbuff = make([]byte, n)
+		copy(cbuff, buff[:n])
+
+		wireMsg := WireMessage{
+			Buff:     cbuff,
+			MsgID:    msgID,
+			Outgoing: false,
+		}
+		pc.parser.Incoming <- wireMsg
+
+		n, err = dst.Write(buff[:n])
 		if err != nil {
 			log.Errorf("Write failed '%s'\n", err)
 			return
@@ -71,9 +84,19 @@ func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn, callback Ca
 			log.Errorf("Read failed '%s'\n", err)
 			return
 		}
-		b := setResponseBuffer(pc.erred, buff[:n], callback)
 
-		n, err = dst.Write(b)
+		msgID := atomic.AddUint64(&pc.msgID, 1)
+		var cbuff = make([]byte, n)
+		copy(cbuff, buff[:n])
+
+		wireMsg := WireMessage{
+			Buff:     cbuff,
+			MsgID:    msgID,
+			Outgoing: true,
+		}
+		pc.parser.Incoming <- wireMsg
+
+		n, err = dst.Write(buff[:n])
 		if err != nil {
 			log.Errorf("Write failed '%s'\n", err)
 			return
@@ -81,16 +104,30 @@ func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn, callback Ca
 	}
 }
 
+func writeBuffer(buffer []byte, msgID uint64, prefix string) {
+	fmt.Printf("WRITING pkg/testdata/%s-%03d\n", prefix, msgID)
+	f, err := os.Create(fmt.Sprintf("pkg/testdata/%s-%03d", prefix, msgID))
+	if err != nil {
+		fmt.Println(f)
+	}
+	defer f.Close()
+
+	_, err = f.Write(buffer)
+	if err != nil {
+		fmt.Println(f)
+	}
+}
+
 // ModifiedBuffer when is local and will call filterCallback function
-func getModifiedBuffer(buffer []byte, filterCallback Callback) (b []byte) {
-	go filterCallback(buffer)
+func getModifiedBuffer(buffer []byte, filterCallback Callback, msgID uint64) (b []byte) {
+	go filterCallback(buffer, msgID)
 
 	return buffer
 }
 
 // ResponseBuffer when is local and will call returnCallback function
-func setResponseBuffer(iserr bool, buffer []byte, filterCallback Callback) (b []byte) {
-	go filterCallback(buffer)
+func setResponseBuffer(iserr bool, buffer []byte, filterCallback Callback, msgID uint64) (b []byte) {
+	go filterCallback(buffer, msgID)
 
 	return buffer
 }
