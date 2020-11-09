@@ -2,24 +2,25 @@ package pgspy
 
 import (
 	"net"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // ProxyConn - Proxy connection, piping data between proxy and remote.
 type ProxyConn struct {
-	sentBytes     uint64
-	receivedBytes uint64
-	laddr, raddr  *net.TCPAddr
-	lconn, rconn  *net.TCPConn
-	erred         bool
-	errsig        chan bool
-	prefix        string
-	connID        uint64
+	laddr, raddr *net.TCPAddr
+	lconn, rconn *net.TCPConn
+	erred        bool
+	errsig       chan bool
+	prefix       string
+	connID       uint64
+	msgID        uint64
+	parser       *Parser
 }
 
 // Pipe will move the bites from the proxy to postgres and back
-func (pc *ProxyConn) Pipe(before Callback, after Callback) {
+func (pc *ProxyConn) Pipe() {
 	defer pc.lconn.Close()
 
 	// connect to remote server
@@ -31,16 +32,19 @@ func (pc *ProxyConn) Pipe(before Callback, after Callback) {
 	pc.rconn = rconn
 	defer pc.rconn.Close()
 
+	// run parser
+	go pc.parser.Parse()
+
 	// proxying data
-	go pc.handleIncomingConnection(pc.lconn, pc.rconn, before)
-	go pc.handleResponseConnection(pc.rconn, pc.lconn, after)
+	go pc.handleRequestConnection(pc.lconn, pc.rconn)
+	go pc.handleResponseConnection(pc.rconn, pc.lconn)
 
 	// wait for close...
 	<-pc.errsig
 }
 
 // Proxy.handleIncomingConnection
-func (pc *ProxyConn) handleIncomingConnection(src, dst *net.TCPConn, callback Callback) {
+func (pc *ProxyConn) handleRequestConnection(src, dst *net.TCPConn) {
 	// directional copy (64k buffer)
 	buff := make([]byte, 0xffff)
 
@@ -50,9 +54,13 @@ func (pc *ProxyConn) handleIncomingConnection(src, dst *net.TCPConn, callback Ca
 			log.Errorf("Read failed '%s'\n", err)
 			return
 		}
-		b := getModifiedBuffer(buff[:n], callback)
 
-		n, err = dst.Write(b)
+		msgID := atomic.AddUint64(&pc.msgID, 1)
+		parserBuff := make([]byte, n)
+		copy(parserBuff, buff)
+		go pc.sendMessageToParser(parserBuff, msgID, false)
+
+		n, err = dst.Write(buff[:n])
 		if err != nil {
 			log.Errorf("Write failed '%s'\n", err)
 			return
@@ -61,7 +69,7 @@ func (pc *ProxyConn) handleIncomingConnection(src, dst *net.TCPConn, callback Ca
 }
 
 // Proxy.handleResponseConnection
-func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn, callback Callback) {
+func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn) {
 	// directional copy (64k buffer)
 	buff := make([]byte, 0xffff)
 
@@ -71,9 +79,14 @@ func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn, callback Ca
 			log.Errorf("Read failed '%s'\n", err)
 			return
 		}
-		b := setResponseBuffer(pc.erred, buff[:n], callback)
 
-		n, err = dst.Write(b)
+		msgID := atomic.AddUint64(&pc.msgID, 1)
+
+		parserBuff := make([]byte, n)
+		copy(parserBuff, buff[:n])
+		go pc.sendMessageToParser(parserBuff, msgID, true)
+
+		n, err = dst.Write(buff[:n])
 		if err != nil {
 			log.Errorf("Write failed '%s'\n", err)
 			return
@@ -81,16 +94,11 @@ func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn, callback Ca
 	}
 }
 
-// ModifiedBuffer when is local and will call filterCallback function
-func getModifiedBuffer(buffer []byte, filterCallback Callback) (b []byte) {
-	go filterCallback(buffer)
-
-	return buffer
-}
-
-// ResponseBuffer when is local and will call returnCallback function
-func setResponseBuffer(iserr bool, buffer []byte, filterCallback Callback) (b []byte) {
-	go filterCallback(buffer)
-
-	return buffer
+func (pc *ProxyConn) sendMessageToParser(buffer []byte, msgID uint64, outgoing bool) {
+	wireMsg := WireMessage{
+		Buff:     buffer,
+		MsgID:    msgID,
+		Outgoing: outgoing,
+	}
+	pc.parser.Incoming <- wireMsg
 }

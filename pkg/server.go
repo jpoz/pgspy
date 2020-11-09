@@ -1,18 +1,8 @@
 package pgspy
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 )
-
-func filterCallback(get []byte) bool {
-	fmt.Printf("filter %s\n", get)
-	return true
-}
-
-func returnCallBack(get []byte) bool {
-	fmt.Printf("filter %s\n", get)
-	return true
-}
 
 // Start will start a new server
 func Start() {
@@ -20,20 +10,11 @@ func Start() {
 	proxyHost := "127.0.0.1:5543"
 
 	proxy := NewProxy(pgHost, proxyHost)
-	proxy.Before = func(b []byte) {
-		// log.Infof("Before: %v -> %s ->", b[0:4], b)
-
-		msg := ParseIncoming(b)
-		if msg != nil {
-			msg.Print()
-		}
-	}
-
-	proxy.After = func(b []byte) {
-		// log.Infof("After: %v -> %s ->", b[0:4], b)
-		msg := ParseOutgoing(b)
-		if msg != nil {
-			msg.Print()
+	proxy.OnMessage = func(msg PostgresMessage) {
+		if msg.Outgoing {
+			log.Infof("-> %s \n %s \n", msg.TypeIdentifier, msg.Payload)
+		} else {
+			log.Infof("<- %s \n %s \n", msg.TypeIdentifier, msg.Payload)
 		}
 	}
 	proxy.Start()
