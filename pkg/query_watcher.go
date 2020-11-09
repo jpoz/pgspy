@@ -1,6 +1,7 @@
 package pgspy
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +29,7 @@ func (qw *QueryWatcher) OnMessage(msg PostgresMessage) {
 		qw.dataRowCount = 0
 		return
 	case BindIncoming:
-		qw.bindings = append(qw.bindings, string(msg.Payload))
+		qw.bindings = append(qw.bindings, fmt.Sprintf("%v", msg.Payload))
 	case DataRowOutgoing:
 		atomic.AddUint64(&qw.dataRowCount, 1)
 		return
