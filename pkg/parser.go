@@ -2,8 +2,6 @@ package pgspy
 
 import (
 	"encoding/binary"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // IncomingTypes is a map from the charTag to the message type
@@ -160,7 +158,6 @@ func (p *Parser) ParseOutgoing(buff []byte, msgID uint64) {
 	buffLen := uint32(len(buff))
 
 	for buffLen > 0 {
-		log.Infof("Response: %v curr:%s len:%d, rem:%d", p.currentResponseMessage.TypeRune, p.currentResponseMessage.TypeIdentifier, buffLen, p.remainingResponseBytes)
 		if p.remainingResponseBytes > 0 {
 			rem := p.remainingResponseBytes
 
@@ -171,13 +168,19 @@ func (p *Parser) ParseOutgoing(buff []byte, msgID uint64) {
 				return
 			}
 
-			p.currentResponseMessage.Payload = append(p.currentResponseMessage.Payload, buff[:rem]...)
+			p.currentResponseMessage.Payload = append(p.currentResponseMessage.Payload, buff[:rem+1]...)
 			p.flushResponse()
 
 			buff = buff[rem+1:]
 		} else {
 			p.currentResponseMessage.TypeRune = rune(buff[0])
 			p.currentResponseMessage.TypeIdentifier = OutoingType[p.currentResponseMessage.TypeRune]
+
+			if buffLen == 1 {
+				p.flushResponse()
+				return
+			}
+
 			length := binary.BigEndian.Uint32(buff[1:5])
 
 			if length == 0 {
@@ -187,7 +190,8 @@ func (p *Parser) ParseOutgoing(buff []byte, msgID uint64) {
 
 			if buffLen < length {
 				p.currentResponseMessage.Payload = append(p.currentResponseMessage.Payload, buff[5:]...)
-				p.remainingResponseBytes = length - uint32(len(buff))
+				p.remainingResponseBytes = length - (buffLen)
+
 				return
 			}
 
@@ -207,47 +211,4 @@ func (p *Parser) flushResponse() {
 	p.Outgoing <- *p.currentResponseMessage
 	p.currentResponseMessage = &PostgresMessage{Outgoing: true}
 	p.remainingResponseBytes = 0
-}
-
-func parseIncomingStartupPacket(buff []byte) []PostgresMessage {
-	log.Infof("<- StartupPacket")
-	return nil
-}
-
-func parseOutgoingStartupPacket(buff []byte) []PostgresMessage {
-	log.Infof("-> StartupPacket")
-	return nil
-}
-
-func parseOutgoingPacket(buff []byte) []PostgresMessage {
-	for len(buff) > 0 {
-		charTag := rune(buff[0])
-		desc := OutoingType[charTag]
-
-		if desc == "" {
-			log.Errorf("Failed to find outgoing type %d\n", buff[0])
-			return nil
-		}
-
-		if len(buff) > 5 {
-			// log.Infof("PROCESSING %v", buff)
-			length := binary.BigEndian.Uint32(buff[1:5])
-			// log.Infof("LENGTH %d", length)
-			if len(buff) < int(length) {
-				log.Errorf("Parse error, length too long\n")
-
-				return nil
-			}
-
-			payload := buff[5 : length+1]
-
-			log.Infof("-> %s (%d) %s", desc, length, payload)
-			buff = buff[length+1:]
-		} else {
-			// log.Infof("-> %s", desc)
-			buff = []byte{}
-		}
-	}
-
-	return nil
 }

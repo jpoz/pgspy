@@ -56,7 +56,9 @@ func (pc *ProxyConn) handleRequestConnection(src, dst *net.TCPConn) {
 		}
 
 		msgID := atomic.AddUint64(&pc.msgID, 1)
-		go pc.sendMessageToParser(buff[:n], msgID, false)
+		parserBuff := make([]byte, n)
+		copy(parserBuff, buff)
+		go pc.sendMessageToParser(parserBuff, msgID, false)
 
 		n, err = dst.Write(buff[:n])
 		if err != nil {
@@ -79,7 +81,10 @@ func (pc *ProxyConn) handleResponseConnection(src, dst *net.TCPConn) {
 		}
 
 		msgID := atomic.AddUint64(&pc.msgID, 1)
-		go pc.sendMessageToParser(buff[:n], msgID, true)
+
+		parserBuff := make([]byte, n)
+		copy(parserBuff, buff[:n])
+		go pc.sendMessageToParser(parserBuff, msgID, true)
 
 		n, err = dst.Write(buff[:n])
 		if err != nil {
