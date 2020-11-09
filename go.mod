@@ -8,6 +8,7 @@ require (
 	github.com/google/martian/v3 v3.0.0
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/lib/pq v1.8.0 // indirect
+	github.com/markbates/pkger v0.17.1
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/wgliang/pgproxy v0.0.0-20170502033211-e19ae27c28d7
