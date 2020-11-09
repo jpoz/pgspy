@@ -4,50 +4,130 @@ import (
 	"encoding/binary"
 )
 
+const (
+	// BindIncoming Incoming Message
+	BindIncoming = "Bind"
+	// CloseIncoming Incoming Message
+	CloseIncoming = "Close"
+	// CopyDataIncoming Incoming Message
+	CopyDataIncoming = "CopyData"
+	// CopyDoneIncoming Incoming Message
+	CopyDoneIncoming = "CopyDone"
+	// CopyFailIncoming Incoming Message
+	CopyFailIncoming = "CopyFail"
+	// DescribeIncoming Incoming Message
+	DescribeIncoming = "Describe"
+	// ExecuteIncoming Incoming Message
+	ExecuteIncoming = "Execute"
+	// FlushIncoming Incoming Message
+	FlushIncoming = "Flush"
+	// FunctionCallIncoming Incoming Message
+	FunctionCallIncoming = "FunctionCall"
+	// ParseIncoming Incoming Message
+	ParseIncoming = "Parse"
+	// PasswordMessageIncoming Incoming Message
+	PasswordMessageIncoming = "PasswordMessage"
+	// QueryIncoming Incoming Message
+	QueryIncoming = "Query"
+	// SyncIncoming Incoming Message
+	SyncIncoming = "Sync"
+	// TerminateIncoming Incoming Message
+	TerminateIncoming = "Terminate"
+
+	// AuthenticationOutgoing Outgoing Message
+	AuthenticationOutgoing = "Authentication"
+	// BackendKeyDataOutgoing Outgoing Message
+	BackendKeyDataOutgoing = "BackendKeyData"
+	// BindCompleteOutgoing Outgoing Message
+	BindCompleteOutgoing = "BindComplete"
+	// CloseCompleteOutgoing Outgoing Message
+	CloseCompleteOutgoing = "CloseComplete"
+	// CommandCompleteOutgoing Outgoing Message
+	CommandCompleteOutgoing = "CommandComplete"
+	// CopyDataOutgoing Outgoing Message
+	CopyDataOutgoing = "CopyData"
+	// CopyDoneOutgoing Outgoing Message
+	CopyDoneOutgoing = "CopyDone"
+	// CopyInResponseOutgoing Outgoing Message
+	CopyInResponseOutgoing = "CopyInResponse"
+	// CopyOutResponseOutgoing Outgoing Message
+	CopyOutResponseOutgoing = "CopyOutResponse"
+	// CopyBothResponseOutgoing Outgoing Message
+	CopyBothResponseOutgoing = "CopyBothResponse"
+	// DataRowOutgoing Outgoing Message
+	DataRowOutgoing = "DataRow"
+	// EmptyQueryResponseOutgoing Outgoing Message
+	EmptyQueryResponseOutgoing = "EmptyQueryResponse"
+	// ErrorResponseOutgoing Outgoing Message
+	ErrorResponseOutgoing = "ErrorResponse"
+	// FunctionCallResponseOutgoing Outgoing Message
+	FunctionCallResponseOutgoing = "FunctionCallResponse"
+	// NegotiateProtocolVersionOutgoing Outgoing Message
+	NegotiateProtocolVersionOutgoing = "NegotiateProtocolVersion"
+	// NoDataOutgoing Outgoing Message
+	NoDataOutgoing = "NoData"
+	// NoticeResponseOutgoing Outgoing Message
+	NoticeResponseOutgoing = "NoticeResponse"
+	// NotificationResponseOutgoing Outgoing Message
+	NotificationResponseOutgoing = "NotificationResponse"
+	// ParameterDescriptionOutgoing Outgoing Message
+	ParameterDescriptionOutgoing = "ParameterDescription"
+	// ParameterStatusOutgoing Outgoing Message
+	ParameterStatusOutgoing = "ParameterStatus"
+	// ParseCompleteOutgoing Outgoing Message
+	ParseCompleteOutgoing = "ParseComplete"
+	// PortalSuspendedOutgoing Outgoing Message
+	PortalSuspendedOutgoing = "PortalSuspended"
+	// ReadyForQueryOutgoing Outgoing Message
+	ReadyForQueryOutgoing = "ReadyForQuery"
+	// RowDescriptionOutgoing Outgoing Message
+	RowDescriptionOutgoing = "RowDescription"
+)
+
 // IncomingTypes is a map from the charTag to the message type
 var IncomingTypes = map[rune]string{
-	'B': "Bind",
-	'C': "Close",
-	'd': "CopyData",
-	'c': "CopyDone",
-	'f': "CopyFail",
-	'D': "Describe",
-	'E': "Execute",
-	'H': "Flush",
-	'F': "FunctionCall",
-	'P': "Parse",
-	'p': "PasswordMessage",
-	'Q': "Query",
-	'S': "Sync",
-	'X': "Terminate",
+	'B': BindIncoming,
+	'C': CloseIncoming,
+	'd': CopyDataIncoming,
+	'c': CopyDoneIncoming,
+	'f': CopyFailIncoming,
+	'D': DescribeIncoming,
+	'E': ExecuteIncoming,
+	'H': FlushIncoming,
+	'F': FunctionCallIncoming,
+	'P': ParseIncoming,
+	'p': PasswordMessageIncoming,
+	'Q': QueryIncoming,
+	'S': SyncIncoming,
+	'X': TerminateIncoming,
 }
 
-// OutoingType is a map from the charTag to the message type
-var OutoingType = map[rune]string{
-	'R': "Authentication",
-	'K': "BackendKeyData",
-	'2': "BindComplete",
-	'3': "CloseComplete",
-	'C': "CommandComplete",
-	'd': "CopyData",
-	'c': "CopyDone",
-	'G': "CopyInResponse",
-	'H': "CopyOutResponse",
-	'W': "CopyBothResponse",
-	'D': "DataRow",
-	'I': "EmptyQueryResponse",
-	'E': "ErrorResponse",
-	'V': "FunctionCallResponse",
-	'v': "NegotiateProtocolVersion",
-	'n': "NoData",
-	'N': "NoticeResponse",
-	'A': "NotificationResponse",
-	't': "ParameterDescription",
-	'S': "ParameterStatus",
-	'1': "ParseComplete",
-	's': "PortalSuspended",
-	'Z': "ReadyForQuery",
-	'T': "RowDescription",
+// OutgoingType is a map from the charTag to the message type
+var OutgoingType = map[rune]string{
+	'R': AuthenticationOutgoing,
+	'K': BackendKeyDataOutgoing,
+	'2': BindCompleteOutgoing,
+	'3': CloseCompleteOutgoing,
+	'C': CommandCompleteOutgoing,
+	'd': CopyDataOutgoing,
+	'c': CopyDoneOutgoing,
+	'G': CopyInResponseOutgoing,
+	'H': CopyOutResponseOutgoing,
+	'W': CopyBothResponseOutgoing,
+	'D': DataRowOutgoing,
+	'I': EmptyQueryResponseOutgoing,
+	'E': ErrorResponseOutgoing,
+	'V': FunctionCallResponseOutgoing,
+	'v': NegotiateProtocolVersionOutgoing,
+	'n': NoDataOutgoing,
+	'N': NoticeResponseOutgoing,
+	'A': NotificationResponseOutgoing,
+	't': ParameterDescriptionOutgoing,
+	'S': ParameterStatusOutgoing,
+	'1': ParseCompleteOutgoing,
+	's': PortalSuspendedOutgoing,
+	'Z': ReadyForQueryOutgoing,
+	'T': RowDescriptionOutgoing,
 }
 
 // WireMessage contains the bytes that were transmitted over the wire and a unique incrementing id
@@ -120,7 +200,7 @@ func (p *Parser) ParseIncoming(buff []byte, msgID uint64) {
 				return
 			}
 
-			p.currentRequestMessage.Payload = append(p.currentRequestMessage.Payload, buff[:rem]...)
+			p.currentRequestMessage.Payload = append(p.currentRequestMessage.Payload, buff[:rem+1]...)
 			p.flushRequest()
 
 			buff = buff[rem+1:]
@@ -174,7 +254,7 @@ func (p *Parser) ParseOutgoing(buff []byte, msgID uint64) {
 			buff = buff[rem+1:]
 		} else {
 			p.currentResponseMessage.TypeRune = rune(buff[0])
-			p.currentResponseMessage.TypeIdentifier = OutoingType[p.currentResponseMessage.TypeRune]
+			p.currentResponseMessage.TypeIdentifier = OutgoingType[p.currentResponseMessage.TypeRune]
 
 			if buffLen == 1 {
 				p.flushResponse()
